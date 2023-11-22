@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS "SteamUsers" (
     loccountrycode TEXT DEFAULT NULL,
     locstatecode TEXT DEFAULT NULL,
     loccityid TEXT DEFAULT NULL,
+    lastupdate TEXT DEFAULT NULL
     UNIQUE(userid,steamid)
 );
 

@@ -84,6 +84,26 @@ def steamusers_select_account_exist(userid):
         disconnect_from_database(conn)
 
 
+def steamusers_select_account_and_steamid_exist(userid, steamid):
+    """SELECT userid from SteamUsers Table to see if record exist"""
+    try:
+        conn, cursor = connect_to_database()
+        query = """
+        SELECT COUNT(*) 
+        FROM SteamUsers 
+        WHERE userid = ? 
+        AND steamid = ?
+        """
+        cursor.execute(query, (userid, steamid))
+        records = cursor.fetchone()[0]
+        return records > 0
+    except:
+        print(f"ERROR: Unable to SELECT userid: {userid}")
+        return False
+    finally:
+        disconnect_from_database(conn)
+
+
 def steamusers_select_account(userid):
     """SELECT steamid in the SteamUsers Table. Returns a Tuples of users data"""
     try:
@@ -118,6 +138,43 @@ def steamusers_select_account_steamid(userid):
         disconnect_from_database(conn)
 
 
+def steamusers_select_account_lastupdated(userid):
+    """SELECT lastupdated in the SteamUsers Table. Returns the userid's lastupdated time"""
+    try:
+        conn, cursor = connect_to_database()
+        query = """
+        SELECT lastupdate FROM SteamUsers WHERE userid = ?
+        """
+        cursor.execute(query, (userid,))
+        records = cursor.fetchone()[0]
+        return records
+    except:
+        print(f"ERROR: Unable to SELECT userid: {userid}")
+        return False
+    finally:
+        disconnect_from_database(conn)
+
+
+def steamusers_update_account_lastupdated(userid, updated_time):
+    """UPDATE lastupdated in the SteamUsers Table"""
+    try:
+        conn, cursor = connect_to_database()
+        query = """
+        UPDATE SteamUsers 
+        SET lastupdate = ? 
+        WHERE userid = ?
+        """
+        cursor.execute(query, (updated_time, userid))
+        conn.commit()
+        print(f"SUCCESS: UPDATED SteamUsers lastupdate: {updated_time}")
+        return True
+    except:
+        print(f"ERROR: Unable to UPDATE lastupdated: {updated_time}")
+        return False
+    finally:
+        disconnect_from_database(conn)
+
+
 def steamusers_insert_account(values):
     """INSERT a new record into the SteamUsers Table"""
     try:
@@ -139,6 +196,101 @@ def steamusers_insert_account(values):
         disconnect_from_database(conn)
 
 
+def steamusers_update_account(
+    userid,
+    steamid,
+    personaname,
+    profileurl,
+    avatar,
+    avatarmedium,
+    avatarfull,
+    personastate,
+    communityvisibilitystate,
+    profilestate,
+    lastlogoff,
+    commentpermission,
+    realname,
+    primaryclanid,
+    timecreated,
+    gameid,
+    gameserverip,
+    gameextrainfo,
+    cityid,
+    loccountrycode,
+    locstatecode,
+    loccityid,
+    lastupdate,
+):
+    """UPDATE a existing record into the SteamUsers Table"""
+    try:
+        conn, cursor = connect_to_database()
+        query = """
+        UPDATE SteamUsers 
+        SET steamid = ?
+        , personaname =?
+        , profileurl = ?
+        , avatar = ?
+        , avatarmedium = ?
+        , avatarfull = ?
+        , personastate = ?
+        , communityvisibilitystate = ?
+        , profilestate = ?
+        , lastlogoff = ?
+        , commentpermission = ?
+        , realname = ?
+        , primaryclanid = ?
+        , timecreated = ?
+        , gameid = ?
+        , gameserverip = ?
+        , gameextrainfo = ?
+        , cityid = ?
+        , loccountrycode = ?
+        , locstatecode = ?
+        , loccityid = ?
+        , lastupdate = ?
+        WHERE userid = ?
+        """
+        cursor.execute(
+            query,
+            (
+                steamid,
+                personaname,
+                profileurl,
+                avatar,
+                avatarmedium,
+                avatarfull,
+                personastate,
+                communityvisibilitystate,
+                profilestate,
+                lastlogoff,
+                commentpermission,
+                realname,
+                primaryclanid,
+                timecreated,
+                gameid,
+                gameserverip,
+                gameextrainfo,
+                cityid,
+                loccountrycode,
+                locstatecode,
+                loccityid,
+                lastupdate,
+                userid,
+            ),
+        )
+        conn.commit()
+        print(f"SUCCESS: UPDATED SteamUsers Userid: {userid}")
+        return True
+    except sqlite3.IntegrityError:
+        print("WARNING: Record already Exists")
+        return True
+    except sqlite3.OperationalError as e:
+        print(f"ERROR: Unable to UPDATE SteamUsers: {e}")
+        return False
+    finally:
+        disconnect_from_database(conn)
+
+
 # ---------------------------------------- SteamUserLibrary Table ----------------------------------------
 def steamuserlibrary_insert_game(values):
     """INSERT a new record into the SteamUserLibrary Table"""
@@ -150,6 +302,50 @@ def steamuserlibrary_insert_game(values):
         """
         cursor.execute(query, values)
         conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        print("WARNING: Record already Exists")
+        return True
+    except sqlite3.OperationalError as e:
+        print(f"ERROR: Unable to INSERT SteamUserLibrary: {e}")
+        return False
+    finally:
+        disconnect_from_database(conn)
+
+
+def steamuserlibrary_update_game(
+    steamid,
+    appid,
+    img_icon_url,
+    has_community_visible_stats,
+    playtime_forever,
+    achivements,
+):
+    """UPDATE a existing record into the SteamUserLibrary Table"""
+    try:
+        conn, cursor = connect_to_database()
+        query = """
+        UPDATE SteamUserLibrary 
+        SET img_icon_url = ?
+        , has_community_visible_stats =?
+        , playtime_forever = ?
+        , achivements = ?
+        WHERE steamid = ?
+        AND appid = ?
+        """
+        cursor.execute(
+            query,
+            (
+                img_icon_url,
+                has_community_visible_stats,
+                playtime_forever,
+                achivements,
+                steamid,
+                appid,
+            ),
+        )
+        conn.commit()
+        print(f"SUCCESS: UPDATED SteamUserLibrary Appid: {appid}")
         return True
     except sqlite3.IntegrityError:
         print("WARNING: Record already Exists")

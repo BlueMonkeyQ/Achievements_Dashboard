@@ -6,12 +6,21 @@ import api
 
 api_key = api.get_api_key()
 
-st.title("Achievements Dashboard")
 
-userid = st.text_input("Enter Account ID")
-userid = str(userid).upper()
+def main():
+    st.title("Achievements Dashboard")
 
-if sql.users_select_account_exist(userid):
-    steam_tab, playstation_tab = st.tabs(["Steam", "Playstation"])
+    userid = None
+    if userid == None:
+        userid = st.text_input("Enter Account ID")
+        userid = str(userid).upper()
 
-    dashboard.steam_dashboard(api_key, steam_tab, userid)
+    if sql.users_select_account_exist(userid):
+        steam_tab, account_tab = st.tabs(["Steam", "Account"])
+
+        dashboard.account_dashboard(api_key, account_tab, userid)
+        dashboard.steam_dashboard(api_key, steam_tab, userid)
+
+
+if __name__ == "__main__":
+    main()

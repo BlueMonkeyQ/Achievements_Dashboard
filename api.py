@@ -27,15 +27,14 @@ def get_api_key():
     try:
         filepath = Path(".credentials.txt")
         if os.path.exists(filepath):
-            file = open(filepath, "r")
-            lines = file.readlines()
+            cred_file = open(filepath, "r")
+            lines = cred_file.readlines()
             key = lines[0].strip()
+            cred_file.close()
             return key
     except:
         print("ERROR: Unable to access .credentials.txt")
         raise
-    finally:
-        file.close()
 
 
 def GetPlayerSummaries(api_key, steamid, userid):
@@ -80,6 +79,7 @@ def GetPlayerSummaries(api_key, steamid, userid):
         "loccountrycode": None,
         "locstatecode": None,
         "loccityid": None,
+        "lastupdate": None,
     }
     for key in expected_dict:
         try:
@@ -104,13 +104,14 @@ def GetPlayerSummaries(api_key, steamid, userid):
         expected_dict["realname"],
         expected_dict["primaryclanid"],
         expected_dict["timecreated"],
+        expected_dict["gameid"],
         expected_dict["gameserverip"],
         expected_dict["gameextrainfo"],
         expected_dict["cityid"],
         expected_dict["loccountrycode"],
         expected_dict["locstatecode"],
         expected_dict["loccityid"],
-        expected_dict["steamid"],
+        expected_dict["lastupdate"],
     )
 
 
