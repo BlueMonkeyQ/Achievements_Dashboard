@@ -1,6 +1,5 @@
 import sqlite3
 
-
 def connect_to_database():
     """Establishes a connection to local sqlite3 database"""
     database_name = "data/Achievements.db"
@@ -12,425 +11,460 @@ def connect_to_database():
         print(f"Error: {e}")
         raise
 
+def query_database(query,values=None):
+    try:
+        conn, cursor = connect_to_database()
+        if values:
+            cursor.execute(query,values)
+            conn.commit()
+            print("SUCCESS: Query ran")
+        else:
+            cursor.execute(query)
+
+        return cursor.fetchall()
+
+    except sqlite3.IntegrityError:
+        print("WARNING: Record already Exists")
+        return True
+    
+    except sqlite3.OperationalError as e:
+        print(f"ERROR: Unable to INSERT query: {e}")
+        return False
+    
+    finally:
+        disconnect_from_database(conn)
 
 def disconnect_from_database(conn):
     """Disconnects from sqlite3 database if connected"""
     if conn:
         conn.close()
 
-
-# ---------------------------------------- Stored Procedure ----------------------------------------
-def steamgame_analytics(gamename):
-    """SELECT all unique games that belong to a steamid"""
+def insert_table_Users(values):
     try:
-        conn, cursor = connect_to_database()
+        query = """
+        INSERT INTO "Users" (
+            userid,
+            password,
+            steamid,
+            playstationid
+            )
+        VALUES (?,?,?,?)
+        """
+        query_database(query,values)
+    except:
+        return False
+
+def get_table_Users(userid):
+    try:
         query = """
         SELECT
-        sa.apiname
-        ,sa.percent
-        ,sul.img_icon_url
-        ,sul.playtime_forever
-        ,sul.achivements
-        FROM SteamGames as sg
-        JOIN SteamAchivements as sa
-        ON sa.appid = sg.appid
-        JOIN SteamUserLibrary as sul
-        ON sul.appid = sg.appid
-        WHERE sg.gamename = ?
-        """
-        cursor.execute(query, (gamename,))
-        records = cursor.fetchall()
-        return records
-    except:
-        print(f"ERROR: Unable to SELECT gamename: {gamename}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-# ---------------------------------------- Users Table ----------------------------------------
-def users_select_account_exist(userid):
-    """SELECT userid from Users Table to see if record exist"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT COUNT(*) FROM Users WHERE userid = ?
-        """
-        cursor.execute(query, (userid,))
-        records = cursor.fetchone()[0]
-        return records > 0
-    except:
-        print(f"ERROR: Unable to SELECT userid: {userid}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-# ---------------------------------------- SteamUsers Table ----------------------------------------
-def steamusers_select_account_exist(userid):
-    """SELECT userid from SteamUsers Table to see if record exist"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT COUNT(*) FROM SteamUsers WHERE userid = ?
-        """
-        cursor.execute(query, (userid,))
-        records = cursor.fetchone()[0]
-        return records > 0
-    except:
-        print(f"ERROR: Unable to SELECT userid: {userid}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-def steamusers_select_account_and_steamid_exist(userid, steamid):
-    """SELECT userid from SteamUsers Table to see if record exist"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT COUNT(*) 
-        FROM SteamUsers 
-        WHERE userid = ? 
-        AND steamid = ?
-        """
-        cursor.execute(query, (userid, steamid))
-        records = cursor.fetchone()[0]
-        return records > 0
-    except:
-        print(f"ERROR: Unable to SELECT userid: {userid}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-def steamusers_select_account(userid):
-    """SELECT steamid in the SteamUsers Table. Returns a Tuples of users data"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT * FROM SteamUsers WHERE userid = ?
-        """
-        cursor.execute(query, (userid,))
-        records = cursor.fetchone()
-        return records
-    except:
-        print(f"ERROR: Unable to SELECT userid: {userid}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-def steamusers_select_account_steamid(userid):
-    """SELECT steamid in the SteamUsers Table. Returns the userid's steamid"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT steamid FROM SteamUsers WHERE userid = ?
-        """
-        cursor.execute(query, (userid,))
-        records = cursor.fetchone()[0]
-        return records
-    except:
-        print(f"ERROR: Unable to SELECT userid: {userid}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-def steamusers_select_account_lastupdated(userid):
-    """SELECT lastupdated in the SteamUsers Table. Returns the userid's lastupdated time"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT lastupdate FROM SteamUsers WHERE userid = ?
-        """
-        cursor.execute(query, (userid,))
-        records = cursor.fetchone()[0]
-        return records
-    except:
-        print(f"ERROR: Unable to SELECT userid: {userid}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-def steamusers_update_account_lastupdated(userid, updated_time):
-    """UPDATE lastupdated in the SteamUsers Table"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        UPDATE SteamUsers 
-        SET lastupdate = ? 
+        *
+        FROM Users
         WHERE userid = ?
         """
-        cursor.execute(query, (updated_time, userid))
-        conn.commit()
-        print(f"SUCCESS: UPDATED SteamUsers lastupdate: {updated_time}")
+        return query_database(query,(userid,))[0]
+    except:
+        return False
+
+# -------------------- STEAM --------------------
+
+# SteamUsers
+def reset_table_SteamUsers() -> bool:
+    # Drops the Table and re-creates it
+    try:
+        query = """
+        DROP TABLE SteamUsers;
+        """
+        query_database(query)
+
+        query = """
+        CREATE TABLE IF NOT EXISTS "SteamUsers" (
+        id INTEGER PRIMARY KEY,
+        steamid INTEGER NOT NULL,
+        communityvisibilitystate INTEGER DEFAULT NULL,
+        profilestate INTEGER DEFAULT NULL,
+        personaname TEXT DEFAULT NULL,
+        profileurl TEXT DEFAULT NULL,
+        avatar TEXT DEFAULT NULL,
+        avatarmedium TEXT DEFAULT NULL,
+        avatarfull TEXT DEFAULT NULL,
+        avatarhash TEXT DEFAULT NULL,
+        lastlogoff INTEGER DEFAULT NULL,
+        personastate INTEGER DEFAULT NULL,
+        realname TEXT DEFAULT NULL,
+        primaryclanid TEXT DEFAULT NULL,
+        timecreated INTEGER DEFAULT NULL,
+        personastateflags INTEGER DEFAULT NULL,
+        commentpermission TEXT DEFAULT NULL,
+        loccountrycode TEXT DEFAULT NULL,
+        locstatecode TEXT DEFAULT NULL,
+        loccityid TEXT DEFAULT NULL,
+        userid INTEGER NOT NULL,
+        lastupdate TEXT DEFAULT NULL,
+        UNIQUE(userid,steamid)
+        );
+        """
+        query_database(query)
         return True
     except:
-        print(f"ERROR: Unable to UPDATE lastupdated: {updated_time}")
         return False
-    finally:
-        disconnect_from_database(conn)
 
-
-def steamusers_insert_account(values):
-    """INSERT a new record into the SteamUsers Table"""
+def insert_table_SteamUsers(values) -> bool:
     try:
-        conn, cursor = connect_to_database()
         query = """
-        INSERT INTO SteamUsers (userid, steamid, personaname, profileurl, avatar, avatarmedium, avatarfull, personastate, communityvisibilitystate, profilestate, lastlogoff, commentpermission, realname, primaryclanid, timecreated, gameid, gameserverip, gameextrainfo, cityid, loccountrycode, locstatecode, loccityid)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        INSERT INTO SteamUsers (
+            steamid, communityvisibilitystate, profilestate, 
+            personaname, profileurl, avatar, 
+            avatarmedium, avatarfull, avatarhash, 
+            lastlogoff, personastate, realname, 
+            primaryclanid, timecreated, personastateflags,
+            commentpermission,
+            loccountrycode, locstatecode, loccityid,
+            userid, lastupdate)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
-        cursor.execute(query, values)
-        conn.commit()
+        query_database(query,values)
         return True
-    except sqlite3.IntegrityError:
-        print("WARNING: Record already Exists")
-        return True
-    except sqlite3.OperationalError as e:
-        print(f"ERROR: Unable to INSERT SteamUsers: {e}")
+    except:
         return False
-    finally:
-        disconnect_from_database(conn)
 
-
-def steamusers_update_account(
-    userid,
-    steamid,
-    personaname,
-    profileurl,
-    avatar,
-    avatarmedium,
-    avatarfull,
-    personastate,
-    communityvisibilitystate,
-    profilestate,
-    lastlogoff,
-    commentpermission,
-    realname,
-    primaryclanid,
-    timecreated,
-    gameid,
-    gameserverip,
-    gameextrainfo,
-    cityid,
-    loccountrycode,
-    locstatecode,
-    loccityid,
-    lastupdate,
-):
-    """UPDATE a existing record into the SteamUsers Table"""
+def get_table_SteamUsers(steamid) -> tuple:
     try:
-        conn, cursor = connect_to_database()
         query = """
-        UPDATE SteamUsers 
-        SET steamid = ?
-        , personaname =?
-        , profileurl = ?
-        , avatar = ?
-        , avatarmedium = ?
-        , avatarfull = ?
-        , personastate = ?
-        , communityvisibilitystate = ?
-        , profilestate = ?
-        , lastlogoff = ?
-        , commentpermission = ?
-        , realname = ?
-        , primaryclanid = ?
-        , timecreated = ?
-        , gameid = ?
-        , gameserverip = ?
-        , gameextrainfo = ?
-        , cityid = ?
-        , loccountrycode = ?
-        , locstatecode = ?
-        , loccityid = ?
-        , lastupdate = ?
-        WHERE userid = ?
+        SELECT
+        *
+        FROM SteamUsers
+        WHERE steamid = ?
         """
-        cursor.execute(
-            query,
-            (
-                steamid,
-                personaname,
-                profileurl,
-                avatar,
-                avatarmedium,
-                avatarfull,
-                personastate,
-                communityvisibilitystate,
-                profilestate,
-                lastlogoff,
-                commentpermission,
-                realname,
-                primaryclanid,
-                timecreated,
-                gameid,
-                gameserverip,
-                gameextrainfo,
-                cityid,
-                loccountrycode,
-                locstatecode,
-                loccityid,
-                lastupdate,
-                userid,
-            ),
-        )
-        conn.commit()
-        print(f"SUCCESS: UPDATED SteamUsers Userid: {userid}")
-        return True
-    except sqlite3.IntegrityError:
-        print("WARNING: Record already Exists")
-        return True
-    except sqlite3.OperationalError as e:
-        print(f"ERROR: Unable to UPDATE SteamUsers: {e}")
+        return query_database(query,(steamid,))[0]
+    except:
         return False
-    finally:
-        disconnect_from_database(conn)
 
-
-# ---------------------------------------- SteamUserLibrary Table ----------------------------------------
-def steamuserlibrary_insert_game(values):
-    """INSERT a new record into the SteamUserLibrary Table"""
+def update_table_SteamUsers(values) -> bool:
     try:
-        conn, cursor = connect_to_database()
-        query = """
-        INSERT INTO SteamUserLibrary (steamid, appid, img_icon_url, has_community_visible_stats, playtime_forever, achivements)
-        VALUES (?,?,?,?,?,?)
-        """
-        cursor.execute(query, values)
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        print("WARNING: Record already Exists")
-        return True
-    except sqlite3.OperationalError as e:
-        print(f"ERROR: Unable to INSERT SteamUserLibrary: {e}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-def steamuserlibrary_update_game(
-    steamid,
-    appid,
-    img_icon_url,
-    has_community_visible_stats,
-    playtime_forever,
-    achivements,
-):
-    """UPDATE a existing record into the SteamUserLibrary Table"""
-    try:
-        conn, cursor = connect_to_database()
         query = """
         UPDATE SteamUserLibrary 
-        SET img_icon_url = ?
-        , has_community_visible_stats =?
-        , playtime_forever = ?
-        , achivements = ?
+        SET communityvisibilitystate  = ?,
+            profilestate  = ?,
+            personaname  = ?,
+            profileurl  = ?,
+            avatar  = ?,
+            avatarmedium  = ?,
+            avatarfull  = ?,
+            avatarhash  = ?,
+            lastlogoff  = ?,
+            personastate  = ?,
+            realname  = ?,
+            primaryclanid  = ?,
+            timecreated  = ?,
+            personastateflags  = ?,
+            commentpermission  = ?,
+            loccountrycode  = ?,
+            locstatecode  = ?,
+            loccityid  = ?,
+            userid  = ?,
+            lastupdate  = ? 
+        WHERE steamid = ?
+        """
+        query_database(query,values)
+        return True
+    except:
+        return False
+    
+# SteamUserFriends
+def reset_table_SteamUserFriends() -> bool:
+    # Drops the Table and re-creates it
+    try:
+        query = """
+        DROP TABLE SteamUserFriends;
+        """
+        query_database(query)
+
+        query = """
+        CREATE TABLE IF NOT EXISTS "SteamUserFriends" (
+        id INTEGER PRIMARY KEY,
+        steamid INTEGER NOT NULL,
+        friendid INTEGER NOT NULL,
+        friend_since INTEGER DEFAULT NULL,
+        UNIQUE(steamid,friendid)
+        );
+        """
+        query_database(query)
+        return True
+    except:
+        return False
+    
+def insert_table_SteamUserFriends(values) -> bool:
+    try:
+        query = """
+        INSERT INTO SteamUserFriends (
+            steamid, friendid, friend_since
+            )
+        VALUES (?,?,?);
+        """
+        query_database(query,values)
+        return True
+    except:
+        return False
+    
+# SteamUserLibrary
+def reset_table_SteamUserLibrary() -> bool:
+    # Drops the Table and re-creates it
+    try:
+        query = """
+        DROP TABLE SteamUserLibrary;
+        """
+        query_database(query)
+
+        query = """
+        CREATE TABLE IF NOT EXISTS "SteamUserLibrary" (
+        id INTEGER PRIMARY KEY,
+        steamid INTEGER NOT NULL,
+        appid INTEGER NOT NULL,
+        img_icon_url TEXT DEFAULT NULL,
+        has_community_visible_stats INTEGER DEFAULT NULL,
+        playtime_forever INTEGER DEFAULT NULL,
+        achivements TEXT DEFAULT NULL,
+        UNIQUE(steamid,appid)
+        );
+        """
+        query_database(query)
+        return True
+    except:
+        return False
+
+def insert_table_SteamUserLibrary(values) -> bool:
+    try:
+        query = """
+        INSERT INTO SteamUserLibrary (
+            steamid, appid, img_icon_url,
+            has_community_visible_stats, playtime_forever, achivements
+            )
+        VALUES (?,?,?,?,?,?);
+        """
+        query_database(query,values)
+        return True
+    except:
+        return False
+
+
+def update_table_SteamUserLibrary_Achivements(values) -> bool:
+    try:
+        query = """
+        UPDATE SteamUserLibrary 
+        SET achivements = ? 
         WHERE steamid = ?
         AND appid = ?
         """
-        cursor.execute(
-            query,
-            (
-                img_icon_url,
-                has_community_visible_stats,
-                playtime_forever,
-                achivements,
-                steamid,
-                appid,
-            ),
-        )
-        conn.commit()
-        print(f"SUCCESS: UPDATED SteamUserLibrary Appid: {appid}")
+        query_database(query,values)
         return True
-    except sqlite3.IntegrityError:
-        print("WARNING: Record already Exists")
-        return True
-    except sqlite3.OperationalError as e:
-        print(f"ERROR: Unable to INSERT SteamUserLibrary: {e}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-def steamuserlibrary_select_all(steamid):
-    """SELECT all unique games FROM STEAMUSERLIBRARY that belong to a steamid"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT * FROM SteamUserLibrary WHERE steamid = ?
-        """
-        cursor.execute(query, (steamid,))
-        records = cursor.fetchall()
-        return records
     except:
-        print(f"ERROR: Unable to SELECT userid: {steamid}")
         return False
-    finally:
-        disconnect_from_database(conn)
 
-
-def steamuserlibrary_select_all_unique(steamid):
-    """SELECT all unique games that belong to a steamid adn returns list of them"""
+# -------------------- PLAYSTATION --------------------
+# PlaystationUser
+def get_table_PlaystationUser(onlineid):
+    """
+    
+    """
     try:
-        conn, cursor = connect_to_database()
         query = """
-        SELECT gamename 
-        FROM SteamUserLibrary as sl 
-        JOIN SteamGames as sg
-        ON sg.appid = sl.appid
-        WHERE sl.steamid = ?
+        SELECT
+        *
+        FROM PlaystationUser
+        WHERE onlineid = ?
         """
-        cursor.execute(query, (steamid,))
-        records = cursor.fetchall()
-        records = [_[0] for _ in records]
-        return records
+        return query_database(query,(onlineid,))[0]
     except:
-        print(f"ERROR: Unable to SELECT userid: {steamid}")
         return False
-    finally:
-        disconnect_from_database(conn)
-
-
-# ---------------------------------------- SteamAchivements Table ----------------------------------------
-def steamachivements_insert_game(values):
-    """INSERT a new record into the SteamAchivements Table"""
+    
+def get_table_PlaystationUser_accountid(onlineid:str):
     try:
-        conn, cursor = connect_to_database()
         query = """
-        INSERT INTO SteamAchivements (appid, apiname, percent)
-        VALUES (?,?,?)
+        SELECT
+        accountid
+        FROM PlaystationUser
+        WHERE onlineid = ?
         """
-        cursor.execute(query, values)
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        print("WARNING: Record already Exists")
-        return True
-    except sqlite3.OperationalError as e:
-        print(f"ERROR: Unable to INSERT SteamAchivements: {e}")
-        return False
-    finally:
-        disconnect_from_database(conn)
-
-
-# ---------------------------------------- SteamGames Table ----------------------------------------
-def steamgames_select_game_name(appid):
-    """SELECT gamename in the SteamGames Table. Returns the appid's gamename"""
-    try:
-        conn, cursor = connect_to_database()
-        query = """
-        SELECT gamename FROM SteamGames WHERE appid = ?
-        """
-        cursor.execute(query, (appid,))
-        records = cursor.fetchone()[0]
-        return records
+        return query_database(query,(onlineid,))[0][0]
     except:
-        print(f"ERROR: Unable to SELECT appid: {appid}")
         return False
-    finally:
-        disconnect_from_database(conn)
+    
+def insert_table_PlaystationUser(values) -> bool:
+    try:
+        query = """
+        INSERT INTO "PlaystationUser" (
+            onlineid,
+            accountid,
+            trophy_level,
+            progress,
+            tier,
+            bronze,
+            silver,
+            gold,
+            platinum,
+            profile_url,
+            avatar_url,
+            firstname,
+            lastname,
+            about_me
+            )
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+        """
+        query_database(query,values)
+        return True
+    except:
+        return False
+
+# PlaystationAchivements
+def insert_table_PlaystationAchivements(values) -> bool:
+    try:
+        query = """
+        INSERT INTO "PlaystationAchivements" (
+            titleid,
+            trophy_name,
+            trophy_type,
+            trophy_detail,
+            trophy_icon_url
+            )
+        VALUES (?,?,?,?,?);
+        """
+        query_database(query,values)
+        return True
+    except:
+        return False
+
+def get_table_PlaystationAchivements_trophy_count(titleid,trophy_type):
+    try:
+        query = """
+        SELECT
+        COUNT (*)
+        FROM PlaystationAchivements
+        WHERE titleid = ?
+        AND trophy_type = ?
+        """
+        return query_database(query,(titleid,trophy_type,))[0][0]
+    except:
+        return False
+    
+# PlaystationLibrary
+def insert_table_PlaystationLibrary(values):
+    try:
+        query = """
+        INSERT INTO "PlaystationLibrary" (
+            titleid,
+            title_name,
+            title_icon_url,
+            bronze,
+            silver,
+            gold,
+            platinum
+            )
+        VALUES (?,?,?,?,?,?,?);
+        """
+        query_database(query,values)
+    except:
+        return False
+
+def update_table_PlaystationLibrary_trophys(values) -> bool:
+    try:
+        query = """
+        UPDATE PlaystationUserLibrary 
+        SET 
+        bronze = ?,
+        silver = ?,
+        gold = ?,
+        platinum = ?
+        WHERE titleid = ?
+        """
+        query_database(query,values)
+    except:
+        return False
+
+def get_table_PlaystationLibrary_titleid(title_name):
+    try:
+        query = f" SELECT titleid FROM PlaystationLibrary WHERE title_name LIKE '%{title_name}%' "
+        return query_database(query)[0][0]
+    except:
+        return False
+    
+def get_table_PlaystationLibary(titleid):
+    try:
+        query = """
+        SELECT
+        *
+        FROM PlaystationLibrary
+        WHERE titleid = ?
+        """
+        return query_database(query,(titleid,))[0]
+    except:
+        return False
+    
+# PlaystationUserLibrary
+    
+def insert_table_PlaystationUserLibary(values) -> bool:
+    try:
+        query = """
+        INSERT INTO "PlaystationUserLibrary" (
+            accountid,
+            titleid,
+            np_communication_id,
+            progress,
+            bronze,
+            silver,
+            gold,
+            platinum,
+            playtime,
+            play_count,
+            first_date_time,
+            last_updated_date_time,
+            title_platform,
+            achivements
+            )
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+        """
+        query_database(query,values)
+    except:
+        return False
+
+def update_table_PlaystationUserLibary_trophys(values) -> bool:
+    try:
+        query = """
+        UPDATE PlaystationUserLibrary 
+        SET 
+        progress = ?,
+        bronze = ?,
+        silver = ?,
+        gold = ?,
+        platinum = ?,
+        achivements = ?
+        WHERE accountid = ?
+        AND titleid = ?
+        """
+        query_database(query,values)
+    except:
+        return False
+
+def get_table_PlaystationUserLibary_platform(titleid):
+    try:
+        query = """
+        SELECT
+        title_platform
+        FROM PlaystationUserLibrary
+        WHERE titleid = ?
+        """
+        return query_database(query,(titleid,))[0][0]
+    except:
+        return False
+
+def get_table_PlaystationUserLibary(accountid):
+    try:
+        query = """
+        SELECT
+        *
+        FROM PlaystationUserLibrary
+        WHERE accountid = ?
+        """
+        return query_database(query,(accountid,))
+    except:
+        return False

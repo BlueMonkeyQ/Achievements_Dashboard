@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS "Users" (
     id INTEGER PRIMARY KEY,
-    userid INTEGER NOT NULL,
-    password TEXT DEFAULT NULL,
+    userid TEXT NOT NULL,
+    password TEXT NOT NULL,
     UNIQUE(userid)
 );
 
@@ -9,28 +9,26 @@ INSERT INTO Users (userid) VALUES ("FFA3837");
 
 CREATE TABLE IF NOT EXISTS "SteamUsers" (
     id INTEGER PRIMARY KEY,
-    userid INTEGER NOT NULL,
     steamid INTEGER NOT NULL,
+    communityvisibilitystate INTEGER DEFAULT NULL,
+    profilestate INTEGER DEFAULT NULL,
     personaname TEXT DEFAULT NULL,
     profileurl TEXT DEFAULT NULL,
     avatar TEXT DEFAULT NULL,
     avatarmedium TEXT DEFAULT NULL,
     avatarfull TEXT DEFAULT NULL,
-    personastate INTEGER DEFAULT NULL,
-    communityvisibilitystate INTEGER DEFAULT NULL,
-    profilestate INTEGER DEFAULT NULL,
+    avatarhash TEXT DEFAULT NULL,
     lastlogoff INTEGER DEFAULT NULL,
-    commentpermission TEXT DEFAULT NULL,
-    realname TEXT DEFAULT NULL,
+    personastate INTEGER DEFAULT NULL,
+    realname TEXT DEFAULT NULL, 
     primaryclanid TEXT DEFAULT NULL,
     timecreated INTEGER DEFAULT NULL,
-    gameid INTEGER DEFAULT NULL,
-    gameserverip TEXT DEFAULT NULL,
-    gameextrainfo TEXT DEFAULT NULL,
-    cityid INTEGER DEFAULT NULL,
+    personastateflags INTEGER DEFAULT NULL,
+    commentpermission TEXT DEFAULT NULL,
     loccountrycode TEXT DEFAULT NULL,
     locstatecode TEXT DEFAULT NULL,
     loccityid TEXT DEFAULT NULL,
+    userid INTEGER NOT NULL,
     lastupdate TEXT DEFAULT NULL
     UNIQUE(userid,steamid)
 );

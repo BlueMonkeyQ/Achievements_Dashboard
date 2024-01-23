@@ -1,9 +1,5 @@
-import pandas as pd
 import requests
-import json
-import os
-from pathlib import Path
-
+from datetime import datetime, timedelta
 
 def connection(url):
     """Establishes a connection to the provided url"""
@@ -21,175 +17,121 @@ def connection(url):
         print(f"Error: {e}")
         raise
 
-
-def get_api_key():
-    """Gets the API key required by the steam API"""
-    try:
-        filepath = Path(".credentials.txt")
-        if os.path.exists(filepath):
-            cred_file = open(filepath, "r")
-            lines = cred_file.readlines()
-            key = lines[0].strip()
-            cred_file.close()
-            return key
-    except:
-        print("ERROR: Unable to access .credentials.txt")
-        raise
-
-
-def GetPlayerSummaries(api_key, steamid, userid):
+def cleanup_api_response(dict,expected_keys):
     """
-    Calls GetPlayerSummaries and Returns basic profile information as a tuple.
-    *   Public Data: steamid, personaname, profileurl, avatar, avatarmedium, avatarfull, personastate, communityvisibilitystate, profilestate, lastlogoff, commentpermission
-    *   Private Data: realname, primaryclanid, timecreated, gameid, gameserverip, gameextrainfo, cityid, loccountrycode, locstatecode, loccityid
+    Given the api and its response dictionary.
+    Check if it has all expected Keys. If not, then add the key with a null value.
+    Then order the dictionary to its expected order
     """
+    
+    ordered_dict = {}
+    for key in expected_keys:
+        if key not in dict:
+            dict[key] = None
+        ordered_dict[key] = dict[key]
+        
+    return ordered_dict
+
+# -------------------- STEAM --------------------
+
+# SteamUsers
+def get_SteamUsers(api_key,steamid):
     try:
-        jsondata = connection(
-            f"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steamid}"
+        geodata = connection(
+                f"http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steamid}"
         )
-        jsondata = jsondata["response"]["players"][0]
+        jsondata = geodata['response']['players'][0]
+        lastupdate = datetime.now()
+        lastupdate = lastupdate + timedelta(seconds=10)
+        lastupdate = str(lastupdate.time())
+        jsondata['userid'] = 0
+        jsondata['lastupdate'] = lastupdate
 
+        expected_keys = ['steamid','communityvisibilitystate',
+                                'profilestate','personaname','profileurl',
+                                'avatar','avatarmedium','avatarfull','avatarhash',
+                                'lastlogoff','personastate','realname',
+                                'primaryclanid','timecreated','personastateflags',
+                                'commentpermission','loccountrycode','locstatecode',
+                                'loccityid','userid','lastupdate']
+
+        jsondata = cleanup_api_response(jsondata,expected_keys)
+        return tuple(jsondata.values())
     except:
         return False
-
-    # Checking if account exist by checking if data returned is a empty list
-    if jsondata == []:
-        return False
-
-    expected_dict = {
-        "userid": userid,
-        "steamid": None,
-        "personaname": None,
-        "profileurl": None,
-        "avatar": None,
-        "avatarmedium": None,
-        "avatarfull": None,
-        "personastate": None,
-        "communityvisibilitystate": None,
-        "profilestate": None,
-        "lastlogoff": None,
-        "commentpermission": None,
-        "realname": None,
-        "primaryclanid": None,
-        "timecreated": None,
-        "gameid": None,
-        "gameserverip": None,
-        "gameextrainfo": None,
-        "cityid": None,
-        "loccountrycode": None,
-        "locstatecode": None,
-        "loccityid": None,
-        "lastupdate": None,
-    }
-    for key in expected_dict:
-        try:
-            value = jsondata[key]
-            expected_dict[key] = value
-        except:
-            continue
-
-    return (
-        expected_dict["userid"],
-        expected_dict["steamid"],
-        expected_dict["personaname"],
-        expected_dict["profileurl"],
-        expected_dict["avatar"],
-        expected_dict["avatarmedium"],
-        expected_dict["avatarfull"],
-        expected_dict["personastate"],
-        expected_dict["communityvisibilitystate"],
-        expected_dict["profilestate"],
-        expected_dict["lastlogoff"],
-        expected_dict["commentpermission"],
-        expected_dict["realname"],
-        expected_dict["primaryclanid"],
-        expected_dict["timecreated"],
-        expected_dict["gameid"],
-        expected_dict["gameserverip"],
-        expected_dict["gameextrainfo"],
-        expected_dict["cityid"],
-        expected_dict["loccountrycode"],
-        expected_dict["locstatecode"],
-        expected_dict["loccityid"],
-        expected_dict["lastupdate"],
-    )
-
-
-def GetOwnedGames(api_key, steamid):
-    """Calls GetOwnedGames for the provided steamid. Returns List of JSONs of all games"""
-
+    
+# SteamUsersFriends
+def get_SteamUserFriends(api_key,steamid):
     try:
-        jsondata = connection(
-            f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={api_key}&steamid={steamid}&format=json&include_appinfo=true"
+        geodata = connection(
+                f"http://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key={api_key}&steamid={steamid}&relationship=friend"
         )
-        jsondata = jsondata["response"]["games"]
+        jsondata = geodata['friendslist']['friends']
+        expected_keys = ['steamid','relationship','friend_since']
+
+        for i in range(len(jsondata)):
+            jsondata[i] = cleanup_api_response(jsondata[i],expected_keys)
+            dict = {'steamid':steamid,'friendid':jsondata[i]['steamid'],'friend_since':jsondata[i]['friend_since']}
+            jsondata[i] = dict
+
+        return [tuple(dict.values()) for dict in jsondata]
     except:
         return False
-
-    games = []
-    for game in jsondata:
-        expected_dict = {
-            "steamid": steamid,
-            "appid": None,
-            "img_icon_url": None,
-            "has_community_visible_stats": None,
-            "playtime_forever": None,
-            "achivements": None,
-        }
-
-        for key in expected_dict:
-            try:
-                value = game[key]
-                expected_dict[key] = value
-            except:
-                continue
-        games.append(expected_dict)
-
-    return games
-
-
-def GetPlayerAchievements(api_key, steamid, appid):
-    """Calls GetPlayerAchievements for the provided steamid and appid. Returns JSON String of all achivements"""
-
+    
+# SteamUserLibrary
+def get_SteamUserLibrary(api_key,steamid):
     try:
-        jsondata = connection(
-            f"http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid={appid}&key={api_key}&steamid={steamid}"
+        geodata = connection(
+                f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={api_key}&steamid={steamid}&format=json&include_appinfo=true"
         )
-        jsondata = jsondata["playerstats"]["achievements"]
+        jsondata = geodata['response']['games']
+        expected_keys = ['appid','img_icon_url','has_community_visible_stats','playtime_forever','achivements']
+
+        for i in range(len(jsondata)):
+            jsondata[i] = cleanup_api_response(jsondata[i],expected_keys)
+            dict = {'steamid':steamid,'appid':jsondata[i]['appid'],
+                    'img_icon_url':jsondata[i]['img_icon_url'],
+                    'has_community_visible_stats':jsondata[i]['has_community_visible_stats'],
+                    'playtime_forever':jsondata[i]['playtime_forever'],
+                    'achivements':jsondata[i]['achivements']}
+            jsondata[i] = dict
+
+        return [tuple(dict.values()) for dict in jsondata]
     except:
         return False
-
-    achivement_dict = {}
-    for achivement in jsondata:
-        achivement_dict[achivement["apiname"]] = {
-            "achieved": achivement["achieved"],
-            "unlocktime": achivement["unlocktime"],
-        }
-
-    return json.dumps(achivement_dict)
-
-
-def GetGlobalAchievementPercentagesForApp(gameid):
-    """Calls GetGlobalAchievementPercentagesForApp for the provided gameid. Returns LIST of JSONs of all achivements and Global completion percentage"""
-
+    
+# SteamAchivements
+def get_Users_SteamAchivements(api_key,steamid,appid):
     try:
-        jsondata = connection(
-            f"http://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid={gameid}&format=json"
+        geodata = connection(
+                f"http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid={appid}&key={api_key}&steamid={steamid}"
         )
-        jsondata = jsondata["achievementpercentages"]["achievements"]
+        jsondata = geodata['playerstats']['achievements']
+        expected_keys = ['apiname','achieved','unlocktime']
+
+        dict = {}
+        for i in range(len(jsondata)):
+            jsondata[i] = cleanup_api_response(jsondata[i],expected_keys)
+            dict[jsondata[i]['apiname']] = {'achieved':jsondata[i]['achieved'],'unlocktime':jsondata[i]['unlocktime']}
+
+        return tuple([str(dict), steamid, 240])
     except:
         return False
 
-    return jsondata
-
-
-def GetAppList():
-    """Calls GetAppList and returns all games in steam"""
-
+def get_SteamAchivements(appid):
     try:
-        jsondata = connection(f"https://api.steampowered.com/ISteamApps/GetAppList/v2/")
-        jsondata = jsondata["applist"]["apps"]
+        geodata = connection(
+                f"http://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid={appid}&format=json"
+        )
+        jsondata = geodata['achievementpercentages']['achievements']
+        expected_keys = ['name','percent']
+
+        dict = {}
+        for i in range(len(jsondata)):
+            jsondata[i] = cleanup_api_response(jsondata[i],expected_keys)
+            dict = {'appid':appid,'apiname':jsondata[i]['name'], 'percent':jsondata[i]['percent']}
+            jsondata[i] = dict
+            
+        return [tuple(dict.values()) for dict in jsondata][0]
     except:
         return False
-
-    return jsondata
