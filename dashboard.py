@@ -127,9 +127,10 @@ def get_master_url(images):
 
 def update_PlaystationUserLibrary(online_id, p_user):
     for i in p_user.title_stats():
+        print(i)
         if sqlite.get_table_PlaystationLibrary_titleid(i.title_id) == False:
             try:
-                game = psnawp.game_title(title_id=i.title_id,account_id='6515971742264256071')
+                game = psnawp.game_title(title_id=i.title_id,account_id=p_user.account_id)
                 game_data = game.get_details()[0]
                 game_trophy = game.trophy_groups_summary(i.category.name)
                 values = ([
@@ -145,20 +146,18 @@ def update_PlaystationUserLibrary(online_id, p_user):
             except:
                 values = ([
                     i.title_id,
-                    game_data['name'],
-                    get_master_url(game_data['media']['images']),
-                    game_trophy.defined_trophies.bronze,
-                    game_trophy.defined_trophies.silver,
-                    game_trophy.defined_trophies.gold,
-                    game_trophy.defined_trophies.platinum,
+                    i.name,
+                    i.image_url,
+                    None,
+                    None,
+                    None,
+                    None,
                 ])
                 sqlite.insert_table_PlaystationLibrary(values)
-                continue
 
             try:
                 gametitle = psnawp.game_title(title_id=i.title_id)
-                platform = sqlite.get_table_PlaystationUserLibary_platform(i.title_id)
-                if platform == False: raise
+                platform = i.category.name
                 for trophy in gametitle.trophies(platform):
                     values = tuple([
                         i.title_id,
@@ -177,38 +176,56 @@ def update_PlaystationUserLibrary(online_id, p_user):
                         None
                 ])
                 sqlite.insert_table_PlaystationAchivements(values)
-                continue
+        try:
+            trophy_titles = p_user.trophy_titles_for_title(title_ids=[i.title_id])
+            if sum(1 for _ in trophy_titles) == 0:
+                raise
+            for j in p_user.trophy_titles_for_title(title_ids=[i.title_id]):
 
-        for j in p_user.trophy_titles_for_title(title_ids=[i.title_id]):
+                # Achivements
+                dict = {}
+                trophy_data = p_user.trophies(np_communication_id=j.np_communication_id, platform=i.category.name, include_metadata=True)
+                for x in trophy_data:
+                    if x.earned == True:
+                        dict[x.trophy_name] = {'earned':x.earned, 'date':x.earned_date_time.strftime("%Y/%d/%m")}
+                    else:
+                        dict[x.trophy_name] = {'earned':x.earned, 'date':None}
 
-            # Achivements
-            dict = {}
-            trophy_data = p_user.trophies(np_communication_id=j.np_communication_id, platform=i.category.name, include_metadata=True)
-            for x in trophy_data:
-                if x.earned == True:
-                    dict[x.trophy_name] = {'earned':x.earned, 'date':x.earned_date_time.strftime("%Y/%d/%m")}
-                else:
-                    dict[x.trophy_name] = {'earned':x.earned, 'date':None}
-
+                values = tuple([
+                    sqlite.get_table_PlaystationUser_accountid('BluemonkeyQ'),
+                    i.title_id,
+                    j.np_communication_id,
+                    j.progress,
+                    j.earned_trophies['bronze'],
+                    j.earned_trophies['silver'],
+                    j.earned_trophies['gold'],
+                    j.earned_trophies['platinum'],
+                    i.play_duration,
+                    i.play_count,
+                    i.first_played_date_time.date().strftime("%Y/%m/%d"),
+                    i.last_played_date_time.date().strftime("%Y/%m/%d"),
+                    i.category.name,
+                    str(dict)
+                ])
+        except:
             values = tuple([
-                sqlite.get_table_PlaystationUser_accountid('BluemonkeyQ'),
-                i.title_id,
-                j.np_communication_id,
-                j.progress,
-                j.earned_trophies['bronze'],
-                j.earned_trophies['silver'],
-                j.earned_trophies['gold'],
-                j.earned_trophies['platinum'],
-                i.play_duration.seconds,
-                i.play_count,
-                i.first_played_date_time.date().strftime("%Y/%m/%d"),
-                i.last_played_date_time.date().strftime("%Y/%m/%d"),
-                i.category.name,
-                str(dict)
-            ])
-        
-        sqlite.insert_table_PlaystationUserLibary(values)
-        sqlite.insert_table_PlaystationUserLibary(values)
+                    sqlite.get_table_PlaystationUser_accountid('BluemonkeyQ'),
+                    i.title_id,
+                    None,
+                    0,
+                    None,
+                    None,
+                    None,
+                    None,
+                    i.play_duration.seconds,
+                    i.play_count,
+                    i.first_played_date_time.date().strftime("%Y/%m/%d"),
+                    i.last_played_date_time.date().strftime("%Y/%m/%d"),
+                    i.category.name,
+                    None
+                ])
+        finally:
+            sqlite.insert_table_PlaystationUserLibary(values)
 
 
 def account_dashboard(account_tab, user, p_user):
