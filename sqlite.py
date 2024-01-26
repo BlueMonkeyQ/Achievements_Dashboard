@@ -11,16 +11,16 @@ def connect_to_database():
         print(f"Error: {e}")
         raise
 
-def query_database(query,values=None):
+def query_database(query,values=None,name=None):
     try:
         conn, cursor = connect_to_database()
         if values:
             cursor.execute(query,values)
             conn.commit()
-            print("SUCCESS: Query ran")
         else:
             cursor.execute(query)
 
+        print(f"SUCCESS: {name}")
         return cursor.fetchall()
 
     except sqlite3.IntegrityError:
@@ -50,7 +50,7 @@ def insert_table_Users(values):
             )
         VALUES (?,?,?,?)
         """
-        query_database(query,values)
+        query_database(query, values=values, name='insert_table_Users')
     except:
         return False
 
@@ -62,7 +62,7 @@ def get_table_Users(userid):
         FROM Users
         WHERE userid = ?
         """
-        return query_database(query,(userid,))[0]
+        return query_database(query,values=(userid,), name='get_table_Users')[0]
     except:
         return False
 
@@ -75,7 +75,7 @@ def reset_table_SteamUsers() -> bool:
         query = """
         DROP TABLE SteamUsers;
         """
-        query_database(query)
+        query_database(query,name='reset_table_SteamUsers')
 
         query = """
         CREATE TABLE IF NOT EXISTS "SteamUsers" (
@@ -104,7 +104,7 @@ def reset_table_SteamUsers() -> bool:
         UNIQUE(userid,steamid)
         );
         """
-        query_database(query)
+        query_database(query,name='reset_table_SteamUsers')
         return True
     except:
         return False
@@ -123,7 +123,7 @@ def insert_table_SteamUsers(values) -> bool:
             userid, lastupdate)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
-        query_database(query,values)
+        query_database(query,values=values,name='insert_table_SteamUsers')
         return True
     except:
         return False
@@ -136,7 +136,7 @@ def get_table_SteamUsers(steamid) -> tuple:
         FROM SteamUsers
         WHERE steamid = ?
         """
-        return query_database(query,(steamid,))[0]
+        return query_database(query,values=(steamid,),name='get_table_SteamUsers')[0]
     except:
         return False
 
@@ -166,7 +166,7 @@ def update_table_SteamUsers(values) -> bool:
             lastupdate  = ? 
         WHERE steamid = ?
         """
-        query_database(query,values)
+        query_database(query,values=values,name='update_table_SteamUsers')
         return True
     except:
         return False
@@ -189,7 +189,7 @@ def reset_table_SteamUserFriends() -> bool:
         UNIQUE(steamid,friendid)
         );
         """
-        query_database(query)
+        query_database(query,name='reset_table_SteamUserFriends')
         return True
     except:
         return False
@@ -202,7 +202,7 @@ def insert_table_SteamUserFriends(values) -> bool:
             )
         VALUES (?,?,?);
         """
-        query_database(query,values)
+        query_database(query,values=values,name='insert_table_SteamUserFriends')
         return True
     except:
         return False
@@ -214,7 +214,7 @@ def reset_table_SteamUserLibrary() -> bool:
         query = """
         DROP TABLE SteamUserLibrary;
         """
-        query_database(query)
+        query_database(query,name='reset_table_SteamUserLibrary')
 
         query = """
         CREATE TABLE IF NOT EXISTS "SteamUserLibrary" (
@@ -228,7 +228,7 @@ def reset_table_SteamUserLibrary() -> bool:
         UNIQUE(steamid,appid)
         );
         """
-        query_database(query)
+        query_database(query,name='reset_table_SteamUserLibrary')
         return True
     except:
         return False
@@ -242,7 +242,7 @@ def insert_table_SteamUserLibrary(values) -> bool:
             )
         VALUES (?,?,?,?,?,?);
         """
-        query_database(query,values)
+        query_database(query,values=values,name='insert_table_SteamUserLibrary')
         return True
     except:
         return False
@@ -256,17 +256,16 @@ def update_table_SteamUserLibrary_Achivements(values) -> bool:
         WHERE steamid = ?
         AND appid = ?
         """
-        query_database(query,values)
+        query_database(query,values=values,name='update_table_SteamUserLibrary_Achivements')
         return True
     except:
         return False
 
 # -------------------- PLAYSTATION --------------------
 # PlaystationUser
-def get_table_PlaystationUser(onlineid):
-    """
     
-    """
+# ---------- GET
+def get_table_PlaystationUser(onlineid):
     try:
         query = """
         SELECT
@@ -274,7 +273,7 @@ def get_table_PlaystationUser(onlineid):
         FROM PlaystationUser
         WHERE onlineid = ?
         """
-        return query_database(query,(onlineid,))[0]
+        return query_database(query,values=(onlineid,),name='get_table_PlaystationUser')[0]
     except:
         return False
     
@@ -286,10 +285,23 @@ def get_table_PlaystationUser_accountid(onlineid:str):
         FROM PlaystationUser
         WHERE onlineid = ?
         """
-        return query_database(query,(onlineid,))[0][0]
+        return query_database(query,values=(onlineid,),name='get_table_PlaystationUser_accountid')[0][0]
     except:
         return False
     
+def get_table_Users_playstation_update_datetime(userid):
+    try:
+        query = """
+        SELECT
+        playstation_update_datetime
+        FROM Users
+        WHERE userid = ?
+        """
+        return query_database(query,values=(userid,),name='get_table_Users_playstation_update_datetime')[0][0]
+    except:
+        return False
+
+# ---------- INSERT
 def insert_table_PlaystationUser(values) -> bool:
     try:
         query = """
@@ -311,7 +323,20 @@ def insert_table_PlaystationUser(values) -> bool:
             )
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
-        query_database(query,values)
+        query_database(query,values=values,name='insert_table_PlaystationUser')
+        return True
+    except:
+        return False
+    
+# ---------- UPDATE
+def update_table_Users_playstation_update_datetime(values) -> bool:
+    try:
+        query = """
+        UPDATE Users 
+        SET playstation_update_datetime = ?
+        WHERE userid = ?
+        """
+        query_database(query,values=values, name='update_table_Users_playstation_update_datetime')
         return True
     except:
         return False
@@ -329,7 +354,7 @@ def insert_table_PlaystationAchivements(values) -> bool:
             )
         VALUES (?,?,?,?,?);
         """
-        query_database(query,values)
+        query_database(query,values=values,name='insert_table_PlaystationAchivements')
         return True
     except:
         return False
@@ -343,7 +368,7 @@ def get_table_PlaystationAchivements_trophy_count(titleid,trophy_type):
         WHERE titleid = ?
         AND trophy_type = ?
         """
-        return query_database(query,(titleid,trophy_type,))[0][0]
+        return query_database(query,values=(titleid,trophy_type,),name='get_table_PlaystationAchivements_trophy_count')[0][0]
     except:
         return False
     
@@ -362,7 +387,7 @@ def insert_table_PlaystationLibrary(values):
             )
         VALUES (?,?,?,?,?,?,?);
         """
-        query_database(query,values)
+        query_database(query,values=values,name='insert_table_PlaystationLibrary')
     except:
         return False
 
@@ -377,14 +402,14 @@ def update_table_PlaystationLibrary_trophys(values) -> bool:
         platinum = ?
         WHERE titleid = ?
         """
-        query_database(query,values)
+        query_database(query,values=values,name='update_table_PlaystationLibrary_trophys')
     except:
         return False
 
-def get_table_PlaystationLibrary_titleid(title_name):
+def get_table_PlaystationLibrary_titleid(titleid):
     try:
-        query = f" SELECT titleid FROM PlaystationLibrary WHERE title_name LIKE '%{title_name}%' "
-        return query_database(query)[0][0]
+        query = f" SELECT titleid FROM PlaystationLibrary WHERE titleid = ? "
+        return query_database(query,values=titleid,name='get_table_PlaystationLibrary_titleid')[0][0]
     except:
         return False
     
@@ -396,7 +421,7 @@ def get_table_PlaystationLibary(titleid):
         FROM PlaystationLibrary
         WHERE titleid = ?
         """
-        return query_database(query,(titleid,))[0]
+        return query_database(query,values=(titleid,),name='get_table_PlaystationLibary')[0]
     except:
         return False
     
@@ -423,7 +448,7 @@ def insert_table_PlaystationUserLibary(values) -> bool:
             )
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);
         """
-        query_database(query,values)
+        query_database(query,values=values,name='insert_table_PlaystationUserLibary')
     except:
         return False
 
@@ -441,7 +466,7 @@ def update_table_PlaystationUserLibary_trophys(values) -> bool:
         WHERE accountid = ?
         AND titleid = ?
         """
-        query_database(query,values)
+        query_database(query,values=values,name='update_table_PlaystationUserLibary_trophys')
     except:
         return False
 
@@ -453,7 +478,7 @@ def get_table_PlaystationUserLibary_platform(titleid):
         FROM PlaystationUserLibrary
         WHERE titleid = ?
         """
-        return query_database(query,(titleid,))[0][0]
+        return query_database(query,values=(titleid,),name='get_table_PlaystationUserLibary_platform')[0][0]
     except:
         return False
 
@@ -465,6 +490,6 @@ def get_table_PlaystationUserLibary(accountid):
         FROM PlaystationUserLibrary
         WHERE accountid = ?
         """
-        return query_database(query,(accountid,))
+        return query_database(query,values=(accountid,),name='get_table_PlaystationUserLibary')
     except:
         return False
