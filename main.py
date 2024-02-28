@@ -4,22 +4,29 @@ import sqlite
 from playstation import playstation_dashboard
 from psnawp_api import PSNAWP
 
-npsso = 'qw01QRUnPCxrpTLPjLavxPEe7lqZzIAo46zCot06mxyqyHefbIVJ5aUbzgsrv2Vc'
-psnawp = PSNAWP(npsso_cookie=npsso)
-api_key = "14EB214CEC3F1701FD192885D330990F"
+# api_key = "14EB214CEC3F1701FD192885D330990F"
+# psnawp: PSNAWP = None
 
 def main():
     st.set_page_config()
     st.title("Achievements Dashboard")
-
+    psnawp = playstation_api()
     user = sqlite.get_table_Users('bluemonkeyq')
-    p_user = psnawp.user(online_id="BluemonkeyQ")
+    steam_tab, playstation_tab, account_tab = st.tabs(["Steam", "Playstation", "Account"])
 
-    steam_tab, playstation_tab, account_tab = st.tabs(["Steam","Playstation","Account"])
+    playstation_dashboard(playstation_tab, user, psnawp)
 
-    playstation_dashboard(playstation_tab, user, p_user)
-    dashboard.steam_dashboard(steam_tab, user)
-    dashboard.account_dashboard(account_tab, user, p_user)
+
+@st.cache_data
+def playstation_api():
+    """
+    Gets the Playstation Network API Wrapper.
+    Caches this return to reduce api calls
+    """
+    npsso = 'S5TjhWutt5jULkEZPCl7Q95599Hshst58vwxy4UEw97XHhGEeYdd8MkwbIBmDPhe'
+    psnawp = PSNAWP(npsso_cookie=npsso)
+    return psnawp
+
 
 if __name__ == "__main__":
     main()
